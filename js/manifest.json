@@ -1,0 +1,9 @@
+{
+    "name": "Content script",
+    "version": "0.1",
+    "manifest_version": 2,
+    "content_scripts": [{
+        "matches": ["http://*/*"],
+        "js": ["index.js"]
+    }]
+}
