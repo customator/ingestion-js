@@ -26,6 +26,8 @@ window.onload = function(){
 			CommonWeb.Callback = function(collection, properties, callback){
 				console.log(properties);
 				var s = serialize(properties);
+				httpRequest.open("get", "http://128.199.64.221:9880/customator.dev?json="+encodeURIComponent(JSON.stringify(properties)), true);
+				httpRequest.send();
 				console.log(s)
 			};
 			CommonWeb.trackSession();
