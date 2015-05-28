@@ -30,9 +30,19 @@ window.onload = function(){
 				httpRequest.send();
 				console.log(s)
 			};
+			CommonWeb.addGlobalProperties({
+				page_info: {
+					viewport_width: $(window).width(),
+					viewport_height: $(window).height(),
+					page_width: $(document).width(),
+					page_height: $(document).height(),
+				}
+			});
 			CommonWeb.trackSession();
 			CommonWeb.trackPageview();
-			CommonWeb.trackClicksPassive($("input"));
+			CommonWeb.trackClicksPassive($("input"), function(event){
+				console.log(event);
+			});
 			CommonWeb.trackClicks();
 			$('#thebutton').click(function(event){
 				console.log('here');
