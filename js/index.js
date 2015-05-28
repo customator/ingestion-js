@@ -11,6 +11,26 @@ serialize = function(obj, prefix) {
     }
   }
   return str.join("&");
+
+}
+
+function relMouseCoords(event){
+    var totalOffsetX = 0;
+    var totalOffsetY = 0;
+    var canvasX = 0;
+    var canvasY = 0;
+    var currentElement = this;
+
+    do{
+        totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
+        totalOffsetY += currentElement.offsetTop - currentElement.scrollTop;
+    }
+    while(currentElement = currentElement.offsetParent)
+
+    canvasX = event.pageX - totalOffsetX;
+    canvasY = event.pageY - totalOffsetY;
+
+    return {x:canvasX, y:canvasY}
 }
 
 window.onload = function(){
@@ -36,12 +56,24 @@ window.onload = function(){
 					viewport_height: $(window).height(),
 					page_width: $(document).width(),
 					page_height: $(document).height(),
+				},
+
+				time: {
+					timestamp: (new Date).getTime(),
 				}
 			});
 			CommonWeb.trackSession();
-			CommonWeb.trackPageview();
+			CommonWeb.trackPageview(function(){
+				return {
+					event: {
+						'type' : 'page_view',
+					},
+				}
+			});
 			CommonWeb.trackClicksPassive($("input"), function(event){
 				console.log(event);
+				mouse_coords = relMouseCoords(event);
+				console.log(mouse_coords);
 			});
 			CommonWeb.trackClicks();
 			$('#thebutton').click(function(event){
