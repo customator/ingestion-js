@@ -19,7 +19,7 @@ function relMouseCoords(event){
     var totalOffsetY = 0;
     var canvasX = 0;
     var canvasY = 0;
-    var currentElement = this;
+    var currentElement = document.body;
 
     do{
         totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
@@ -42,7 +42,7 @@ window.onload = function(){
 	var n=document.getElementsByTagName("script")[0];
 	n.parentNode.insertBefore(lazyloader,n);
 	lazyloader.onload = function(){
-		LazyLoad.js(['https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js', 'https://f2be67ea0ae8d203e5c981405fe4519423aee692.googledrive.com/host/0B6BJml1-TTkLfkxhMjRDRGc1Q0RfWXdyd3h3QThPWlpoZjh0NXBYek1LVUVDY01URExjcGs/common-web.min.js'], function(){
+		LazyLoad.js(['https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js', 'js/common-web.js'], function(){
 			CommonWeb.Callback = function(collection, properties, callback){
 				console.log(properties);
 				var s = serialize(properties);
@@ -57,12 +57,8 @@ window.onload = function(){
 					page_width: $(document).width(),
 					page_height: $(document).height(),
 				},
-
-				time: {
-					timestamp: (new Date).getTime(),
-				}
 			});
-			CommonWeb.trackSession();
+			CommonWeb.trackSession('customator_guid');
 			CommonWeb.trackPageview(function(){
 				return {
 					event: {
@@ -70,16 +66,28 @@ window.onload = function(){
 					},
 				}
 			});
+      var elements = undefined;
+      CommonWeb.trackClicks($("a"), function(event){
+        mouse_coords = relMouseCoords(event);
+        return {
+          mouse_coords,
+          time: {
+          timestamp: (new Date).getTime(),
+          },
+        };
+      });
 			CommonWeb.trackClicksPassive($("input"), function(event){
 				console.log(event);
 				mouse_coords = relMouseCoords(event);
 				console.log(mouse_coords);
+        return {
+          mouse_coords,
+          time: {
+          timestamp: (new Date).getTime(),
+          },
+        };
 			});
-			CommonWeb.trackClicks();
-			$('#thebutton').click(function(event){
-				console.log('here');
-				$('#thebutton').val('Hi!!!!');
-			});
+      CommonWeb.trackFormSubmissions();
 		});
 	}
 }
