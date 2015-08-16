@@ -351,16 +351,6 @@ LazyLoad = (function (doc) {
   };
 })(this.document);
 
-var patches = {
-  '/Customator/index.html' : ["$('#thelink').text('TEst 1');"],
-  '/test' : ["$('<div>Test elements</div>').appendTo($('body'))"]
-};
-
-
-var elements_to_track = {
-  '/Customator/index.html' : ["a", "input"],
-};
-
 var httpRequest = new XMLHttpRequest();
 
 serialize = function(obj, prefix) {
@@ -408,45 +398,59 @@ function applyPatches(){
 window.onload = function(){
 	console.log('Customator Loaded');
   console.log(window.location.pathname);
-	LazyLoad.js(['https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js', 'http://customator.io/ingestion-js/js/common-web.js'], function(){
-      applyPatches();
-			CommonWeb.Callback = function(collection, properties, callback){
-				var s = serialize(properties);
-				httpRequest.open("get", "http://128.199.64.221:9880/customator.dev?json="+encodeURIComponent(JSON.stringify(properties)), true);
-				httpRequest.send();
-			};
-			CommonWeb.addGlobalProperties({
-				page_info: {
-					viewport_width: $(window).width(),
-					viewport_height: $(window).height(),
-					page_width: $(document).width(),
-					page_height: $(document).height(),
-				},
-			});
-			CommonWeb.trackSession('customator_guid');
-			CommonWeb.trackPageview(function(){
-				return {
-					event: {
-						'type' : 'page_view',
-					},
-				}
-			});
-      currentLocation = window.location.pathname;
-      if (elements_to_track.hasOwnProperty(currentLocation)) {
-        elements_to_track[currentLocation].forEach(function(element){
-        CommonWeb.trackClicks($(element), function(event){
-          mouse_coords = relMouseCoords(event);
-          return {
-            mouse_coords,
-            time: {
-            timestamp: (new Date).getTime(),
-            },
-          };
+  var libs_to_load = ['http://customator.io/ingestion-js/js/common-web.js']
+  if (!window.jQuery){
+    console.log('No jQuery');
+    libs_to_load.unshift('https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js');
+    console.log()
+  }
+  LazyLoad.js(libs_to_load, function(){
+        applyPatches();
+  			CommonWeb.Callback = function(collection, properties, callback){
+  				var s = serialize(properties);
+  				httpRequest.open("get", "http://128.199.64.221:9880/customator.dev?json="+encodeURIComponent(JSON.stringify(properties)), true);
+  				httpRequest.send();
+  			};
+  			CommonWeb.addGlobalProperties({
+  				page_info: {
+  					viewport_width: $(window).width(),
+  					viewport_height: $(window).height(),
+  					page_width: $(document).width(),
+  					page_height: $(document).height()
+  				}
+  			});
+  			CommonWeb.trackSession('customator_guid');
+  			CommonWeb.trackPageview(function(){
+  				return {
+  					event: {
+  						'type' : 'page_view'
+  					}
+  				}
+  			});
+        currentLocation = window.location.pathname;
+        if (elements_to_track.hasOwnProperty(currentLocation)) {
+          elements_to_track[currentLocation].forEach(function(element){
+          CommonWeb.trackClicks($(element), function(event){
+            mouse_coords = relMouseCoords(event);
+            return {
+              'mouse_position': mouse_coords,
+              'time': {
+                timestamp: (new Date).getTime()
+              }
+            }
+          });
         });
-      });
-      }
-      CommonWeb.trackFormSubmissions();
-		});
+        }
+        CommonWeb.trackFormSubmissions();
+  	});
 }
 
+var patches = {
+  '/Customator/index.html' : ["$('#thelink').text('TEst 1');"],
+  '/test' : ["$('<div>Test elements</div>').appendTo($('body'))"]
+};
 
+
+var elements_to_track = {
+  '/Customator/index.html' : ["a", "input"]
+};
