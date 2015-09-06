@@ -78,7 +78,7 @@ var callCW;
     //   }
     // }
 
-    var guid = getCookie(cookieName);
+    var visitor_id = getCookie(cookieName);
     //
     //Hard Coded COOKIE NAME CHANGE SOON
     //
@@ -88,6 +88,10 @@ var callCW;
           return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
         }
     // We didn't find our guid in the cookies, so we need to generate our own
+    if (!visitor_id) {
+      var expiry_time = 2 * 365 * 24 * 60;
+      setCookie(cookieName, guid, expiry_time);
+    }
     // if(!guid) {
     //   if(typeof(defaultGuid) === "string") {
     //     guid = defaultGuid;
@@ -107,13 +111,13 @@ var callCW;
 
     // }
 
-    // if(!visitId) {
-    //   visitId = genSub() + genSub() + "-" + genSub() + "-" + 
-    //       genSub() + "-" + genSub() + "-" + genSub() + genSub() + genSub();
+    if(!visitId) {
+      visitId = genSub() + genSub() + "-" + genSub() + "-" + 
+          genSub() + "-" + genSub() + "-" + genSub() + genSub() + genSub();
 
-    //   var expiry_time = 4 * 60;
-    //   setCookie('customator_visit', visitId, expiry_time);
-    // }
+      var expiry_time = 4 * 60;
+      setCookie('customator_visit', visitId, expiry_time);
+    }
 
     
     CommonWeb.addGlobalProperties({visitor_id: guid, visit_id: visitId});
@@ -877,66 +881,82 @@ function relMouseCoords(event){
     canvasX = event.pageX - totalOffsetX;
     canvasY = event.pageY - totalOffsetY;
 
-    return {x:canvasX, y:canvasY}
+    return {mouse_position_x:canvasX, mouse_position_y:canvasY}
 }
 
 function applyPatches(){
   currentLocation = window.location.pathname;
   if (patches.hasOwnProperty(currentLocation)) {
     patches[currentLocation].forEach(function(p){
-      // tracking[p["type"]+"_id"] = p["id"];
-      // tracking["element"] = p["element"];
-      // tracking["eventname"] = "ab_impression";
-      // tracking["abtype"] = "impression";
-      // TODO: Send impression event
-      console.log("Applying patch for " + p["type"] + " " + p["id"]);
-      // console.log(JSON.stringify(tracking));
-      // lzdtracker.trackImpression(p["element"], tracking);
+      var patch_payload = {}
+      patch_payload[p["type"]+"_id"] = p["id"];
+      patch_payload["element"] = p["element"];
+      patch_payload["event"] = "impression";
+      // console.log("Applying patch for " + p["type"] + " " + p["id"]);
+      // trackImpression(patch_payload);
       var fn = new Function(p["element"]);
       fn();
     });
   }
 };
+function applyTrackers(){
+  currentLocation = window.location.pathname;
+  if (trackers.hasOwnProperty(currentLocation)) {
+    trackers[currentLocation].forEach(function(p){
+      var track_payload = {}
+      track_payload["goal_id"] = p["id"];
+      track_payload["element"] = p["element"];
+      track_payload["event"] = "click";
+      track_payload["eventtype"] = "goal";
+      // console.log(JSON.stringify(tracking));
+      var fn = new Function(p["element"]);
+      trackClicks(fn(), track_payload);
+    });
+  }
+};
+
+function trackClicks(element, payload){
+  if (window.CommonWeb){
+    console.log(element);
+    CommonWeb.trackClicks(element, function(event){
+      mouse_coords = relMouseCoords(event);
+        return {
+          mouse_coords,
+          timestamp: (new Date).getTime(),
+          payload,
+        }
+    });
+  }
+
+}
 
 function beginTracking(){
       applyPatches();
       callCW(window.jQuery);
+      applyTrackers();
       console.log('Before Callback');
       CommonWeb.Callback = function(collection, properties, callback){
         var s = serialize(properties);
         httpRequest.open("get", "http://128.199.64.221:9880/customator.dev?json="+encodeURIComponent(JSON.stringify(properties)), true);
         httpRequest.send();
       };
-      CommonWeb.addGlobalProperties({ 
-        page_info: {
-          viewport_width: $(window).width(),
-          viewport_height: $(window).height(),
-          page_width: $(document).width(),
-          page_height: $(document).height()
-        }
-      });
+      var globalProperties = {};
+      globalProperties['viewport_width'] = $(window).width();
+      globalProperties['viewport_height'] = $(window).height();
+      globalProperties['page_width'] = $(document).width();
+      globalProperties['page_height'] = $(document).height();
+      for (var attr in tracking) {
+        globalProperties[attr] = tracking[attr];
+      }
+      console.log(globalProperties);
+      CommonWeb.addGlobalProperties(globalProperties);
       CommonWeb.trackSession('customator_guid');
       CommonWeb.trackPageview(function(){
         return {
-          event: {
-            'type' : 'page_view'
+          event: 'page_view'
           }
-        }
       });
       currentLocation = window.location.pathname;
-      if (elements_to_track.hasOwnProperty(currentLocation)) {
-        elements_to_track[currentLocation].forEach(function(element){
-        CommonWeb.trackClicks($(element), function(event){
-          mouse_coords = relMouseCoords(event);
-          return {
-            'mouse_position': mouse_coords,
-            'time': {
-              timestamp: (new Date).getTime()
-            }
-          }
-        });
-      });
-      }
       CommonWeb.trackFormSubmissions();
 }
 
@@ -956,11 +976,13 @@ window.onload = function(){
   }
 }
 
-
-
 var patches = {"/Customator/index.html":[{"id":8,"type":"vars","element":"$(\".brands__list-item\").css(\"background-color\",\"blue\");"}]}
 
+var tracking = {
+  "test": "a",
+  "test 2": ["a", "b", "c"],
+}
 
-var elements_to_track = {
-  '/Customator/index.html' : ["a", "input"]
-};
+var guid = '';
+
+var trackers={"/Customator/index.html":[{"id":2,"element":"$(\"#thelink\")"}]}; 
