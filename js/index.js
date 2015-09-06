@@ -1,16 +1,16 @@
 var callCW;
 
-(function () {
+var visitId;
 
-  callCW = function($){
   // cookies
   // http://www.quirksmode.org/js/cookies.html
-  function setCookie(name, value, ttl) {
+function setCookie(name, value, ttl) {
     var expires = "";
     var cookieDomain = "";
     if (ttl) {
       var date = new Date();
           //Get the UUID from serverdate.setTime(date.getTime() + (ttl * 60 * 1000));
+      date.setTime(date.getTime() + (ttl * 1000));
       expires = "; expires=" + date.toGMTString();
     }
     document.cookie = name + "=" + escape(value) + expires + cookieDomain + "; path=/";
@@ -36,6 +36,10 @@ var callCW;
   function destroyCookie(name) {
     setCookie(name, "", -1);
   }
+
+(function () {
+
+  callCW = function($){
 
   var options = {
     pageviewsEventName: "pageviews",
@@ -82,7 +86,8 @@ var callCW;
     //
     //Hard Coded COOKIE NAME CHANGE SOON
     //
-    var visitId = getCookie('customator_visit');
+    visitId = getCookie("customator_visit");
+    console.log(visitId);
     //Get the UUID from server
     genSub = function() {
           return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
@@ -116,7 +121,7 @@ var callCW;
           genSub() + "-" + genSub() + "-" + genSub() + genSub() + genSub();
 
       var expiry_time = 4 * 60;
-      setCookie('customator_visit', visitId, expiry_time);
+      setCookie("customator_visit", visitId, expiry_time);
     }
 
     
@@ -893,7 +898,7 @@ function applyPatches(){
       patch_payload["element"] = p["element"];
       patch_payload["event"] = "impression";
       // console.log("Applying patch for " + p["type"] + " " + p["id"]);
-      // trackImpression(patch_payload);
+      trackImpression(patch_payload);
       var fn = new Function(p["element"]);
       fn();
     });
@@ -914,6 +919,24 @@ function applyTrackers(){
     });
   }
 };
+
+function trackImpression(patch_payload){
+  var properties = {};
+  properties['page_url'] = window.location.href;
+  properties['referrer_url'] = document.referrer;
+  properties['viewport_width'] = $(window).width();
+  properties['viewport_height'] = $(window).height();
+  properties['page_width'] = $(document).width();
+  properties['page_height'] = $(document).height();
+  var visitId = getCookie('customator_visit');
+  properties['visitId'] = visitId;
+  properties['visitor_id'] = guid;
+  properties['event'] = 'impressions';
+  for (var attr in patch_payload) {
+        properties[attr] = patch_payload[attr];
+  }
+  console.log(properties);
+}
 
 function trackClicks(element, payload){
   if (window.CommonWeb){
@@ -962,7 +985,7 @@ function beginTracking(){
 
 window.onload = function(){
 	console.log('Customator Loaded');
-  console.log(window.location.pathname);
+  console.log(document.cookie);
   var libs_to_load = []
   if (!window.jQuery){
     console.log('No jQuery');
