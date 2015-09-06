@@ -10,7 +10,7 @@ var callCW;
     var cookieDomain = "";
     if (ttl) {
       var date = new Date();
-      date.setTime(date.getTime() + (ttl * 60 * 1000));
+          //Get the UUID from serverdate.setTime(date.getTime() + (ttl * 60 * 1000));
       expires = "; expires=" + date.toGMTString();
     }
     document.cookie = name + "=" + escape(value) + expires + cookieDomain + "; path=/";
@@ -25,6 +25,7 @@ var callCW;
       while (c.charAt(0) === ' ') {
         c = c.substring(1, c.length);
       }
+      //
       if (c.indexOf(nameEQ) === 0) {
         return unescape(c.substring(nameEQ.length, c.length));
       }
@@ -82,39 +83,40 @@ var callCW;
     //Hard Coded COOKIE NAME CHANGE SOON
     //
     var visitId = getCookie('customator_visit');
-
+    //Get the UUID from server
     genSub = function() {
           return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
         }
     // We didn't find our guid in the cookies, so we need to generate our own
-    if(!guid) {
-      if(typeof(defaultGuid) === "string") {
-        guid = defaultGuid;
-      } else {
-        guid = genSub() + genSub() + "-" + genSub() + "-" + 
-          genSub() + "-" + genSub() + "-" + genSub() + genSub() + genSub();
-      }
+    // if(!guid) {
+    //   if(typeof(defaultGuid) === "string") {
+    //     guid = defaultGuid;
+    //   } else {
+    //     guid = genSub() + genSub() + "-" + genSub() + "-" + 
+    //       genSub() + "-" + genSub() + "-" + genSub() + genSub() + genSub();
+    //   }
 
-      var expiry_time = 2 * 365 * 24 * 60;
-      setCookie(cookieName, guid, expiry_time);
-      // expiration_date = new Date();
-      // expiration_date.setFullYear(expiration_date.getFullYear() + 1);
+    //   var expiry_time = 2 * 365 * 24 * 60;
+    //   setCookie(cookieName, guid, expiry_time);
+    //   //
+    //   // expiration_date = new Date();
+    //   // expiration_date.setFullYear(expiration_date.getFullYear() + 1);
 
-      // cookie_string = cookieName + "=" + guid + "; path/; expires=" + expiration_date.toGMTString();
-      // document.cookie = cookie_string
+    //   // cookie_string = cookieName + "=" + guid + "; path/; expires=" + expiration_date.toGMTString();
+    //   // document.cookie = cookie_string
 
-    }
+    // }
 
-    if(!visitId) {
-      visitId = genSub() + genSub() + "-" + genSub() + "-" + 
-          genSub() + "-" + genSub() + "-" + genSub() + genSub() + genSub();
+    // if(!visitId) {
+    //   visitId = genSub() + genSub() + "-" + genSub() + "-" + 
+    //       genSub() + "-" + genSub() + "-" + genSub() + genSub() + genSub();
 
-      var expiry_time = 4 * 60;
-      setCookie('customator_visit', visitId, expiry_time);
-    }
+    //   var expiry_time = 4 * 60;
+    //   setCookie('customator_visit', visitId, expiry_time);
+    // }
 
     
-    CommonWeb.addGlobalProperties({visitorId: guid, visitId: visitId});
+    CommonWeb.addGlobalProperties({visitor_id: guid, visit_id: visitId});
 
   }
 
@@ -881,12 +883,62 @@ function relMouseCoords(event){
 function applyPatches(){
   currentLocation = window.location.pathname;
   if (patches.hasOwnProperty(currentLocation)) {
-    patches[currentLocation].forEach(function(patch){
-      var fn = new Function(patch);
+    patches[currentLocation].forEach(function(p){
+      // tracking[p["type"]+"_id"] = p["id"];
+      // tracking["element"] = p["element"];
+      // tracking["eventname"] = "ab_impression";
+      // tracking["abtype"] = "impression";
+      // TODO: Send impression event
+      console.log("Applying patch for " + p["type"] + " " + p["id"]);
+      // console.log(JSON.stringify(tracking));
+      // lzdtracker.trackImpression(p["element"], tracking);
+      var fn = new Function(p["element"]);
       fn();
     });
   }
 };
+
+function beginTracking(){
+      applyPatches();
+      callCW(window.jQuery);
+      console.log('Before Callback');
+      CommonWeb.Callback = function(collection, properties, callback){
+        var s = serialize(properties);
+        httpRequest.open("get", "http://128.199.64.221:9880/customator.dev?json="+encodeURIComponent(JSON.stringify(properties)), true);
+        httpRequest.send();
+      };
+      CommonWeb.addGlobalProperties({ 
+        page_info: {
+          viewport_width: $(window).width(),
+          viewport_height: $(window).height(),
+          page_width: $(document).width(),
+          page_height: $(document).height()
+        }
+      });
+      CommonWeb.trackSession('customator_guid');
+      CommonWeb.trackPageview(function(){
+        return {
+          event: {
+            'type' : 'page_view'
+          }
+        }
+      });
+      currentLocation = window.location.pathname;
+      if (elements_to_track.hasOwnProperty(currentLocation)) {
+        elements_to_track[currentLocation].forEach(function(element){
+        CommonWeb.trackClicks($(element), function(event){
+          mouse_coords = relMouseCoords(event);
+          return {
+            'mouse_position': mouse_coords,
+            'time': {
+              timestamp: (new Date).getTime()
+            }
+          }
+        });
+      });
+      }
+      CommonWeb.trackFormSubmissions();
+}
 
 window.onload = function(){
 	console.log('Customator Loaded');
@@ -895,53 +947,18 @@ window.onload = function(){
   if (!window.jQuery){
     console.log('No jQuery');
     libs_to_load.unshift('https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js');
-  }
-  LazyLoad.js(libs_to_load, function(){
-        applyPatches();
-        callCW(window.jQuery);
-  			CommonWeb.Callback = function(collection, properties, callback){
-  				var s = serialize(properties);
-  				httpRequest.open("get", "http://128.199.64.221:9880/customator.dev?json="+encodeURIComponent(JSON.stringify(properties)), true);
-  				httpRequest.send();
-  			};
-  			CommonWeb.addGlobalProperties({
-  				page_info: {
-  					viewport_width: $(window).width(),
-  					viewport_height: $(window).height(),
-  					page_width: $(document).width(),
-  					page_height: $(document).height()
-  				}
-  			});
-  			CommonWeb.trackSession('customator_guid');
-  			CommonWeb.trackPageview(function(){
-  				return {
-  					event: {
-  						'type' : 'page_view'
-  					}
-  				}
-  			});
-        currentLocation = window.location.pathname;
-        if (elements_to_track.hasOwnProperty(currentLocation)) {
-          elements_to_track[currentLocation].forEach(function(element){
-          CommonWeb.trackClicks($(element), function(event){
-            mouse_coords = relMouseCoords(event);
-            return {
-              'mouse_position': mouse_coords,
-              'time': {
-                timestamp: (new Date).getTime()
-              }
-            }
-          });
-        });
-        }
-        CommonWeb.trackFormSubmissions();
+    LazyLoad.js(libs_to_load, function(){
+        beginTracking();
   	});
+  }
+  else {
+    beginTracking();
+  }
 }
 
-var patches = {
-  '/Customator/index.html' : ["$('#thelink').text('TEst 1');"],
-  '/test' : ["$('<div>Test elements</div>').appendTo($('body'))"]
-};
+
+
+var patches = {"/Customator/index.html":[{"id":8,"type":"vars","element":"$(\".brands__list-item\").css(\"background-color\",\"blue\");"}]}
 
 
 var elements_to_track = {
