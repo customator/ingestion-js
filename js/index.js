@@ -942,12 +942,16 @@ function trackClicks(element, payload){
   if (window.CommonWeb){
     console.log(element);
     CommonWeb.trackClicks(element, function(event){
+      extraProperties = {};
       mouse_coords = relMouseCoords(event);
-        return {
-          mouse_coords,
-          timestamp: (new Date).getTime(),
-          payload,
-        }
+      for (var attr in mouse_coords) {
+        extraProperties[attr] = mouse_coords[attr];
+      }
+      for (var attr in payload) {
+        extraProperties[attr] = payload[attr];
+      }
+      extraProperties['timestamp'] = (new Date).getTime();
+      return extraProperties;
     });
   }
 
@@ -959,6 +963,23 @@ function beginTracking(){
       applyTrackers();
       console.log('Before Callback');
       CommonWeb.Callback = function(collection, properties, callback){
+        // for (var attr in properties['element']){
+        //   properties["element_"+attr] = properties['element'][attr];
+        // }
+        // for (var attr)
+        // delete properties['element'];
+        // console.log(properties);
+        //Potential loopholes exist
+        for (var attr in properties){
+          if (typeof properties[attr] == 'object' && !(Array.isArray(properties[attr]))){
+            console.log(attr);
+            for (var key in properties[attr]){
+              properties[attr+"_"+key] = properties[attr][key];
+            }
+            delete properties[attr];
+          }
+        }
+        console.log(properties);
         var s = serialize(properties);
         httpRequest.open("get", "http://128.199.64.221:9880/customator.dev?json="+encodeURIComponent(JSON.stringify(properties)), true);
         httpRequest.send();
